@@ -96,18 +96,19 @@ class IHQCD{
       } ;
 };
 
-int main(){
-    IHQCD ihqcd = IHQCD();
-    vector<vector<long double> > solution;
-    solution = ihqcd.solveIHQCD();
-    ofstream myfile;
-    myfile.open ("data.txt");
-    myfile << "z" << '\t' << "A" << '\t' << "lambda" << endl;
-    int n = solution[0].size() ;
-    for(int i = 0 ; i < n ; i++)
-    {
-      myfile << solution[0][i] << '\t' << solution[1][i] << '\t' << solution[2][i] << endl;
-    }
-    myfile.close();
-    return 0;
+int main()
+{
+  IHQCD ihqcd = IHQCD();
+  vector<vector<long double> > solution;
+  solution = ihqcd.solveIHQCD();
+  ofstream myfile;
+  myfile.open ("data.txt");
+  myfile << "z" << '\t' << "A" << '\t' << "lambda" << endl;
+  int n = solution[0].size() ;
+  for(int i = 0 ; i < n ; i++)
+  {
+    myfile << solution[0][i] << '\t' << solution[1][i] << '\t' << solution[2][i] << endl;
+  }
+  myfile.close();
+  return 0;
 }
