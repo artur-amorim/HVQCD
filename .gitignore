@@ -39,3 +39,6 @@
 
 # Gnuplot files
 *.gnu
+
+# All the files in notes
+notes/*
