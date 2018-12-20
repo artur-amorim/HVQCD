@@ -17,14 +17,14 @@ using namespace boost::numeric::odeint ;
 namespace phoenix = boost::phoenix;
 
 // The stiff algorith only accepts these data types
-typedef boost::numeric::ublas::vector< double > vector_type;
+typedef boost::numeric::ublas::vector< double > state_type;
 typedef boost::numeric::ublas::matrix< double > matrix_type;
 
 struct output_observer
 {
     vector< vector< double > > &data;
     output_observer( vector< vector < double > > &fieldsData ) : data( fieldsData ) { }
-    void operator()( const vector_type &X , double A ) const
+    void operator()( const state_type &X , double A ) const
     {
         // Add A to vector of As
         data[0].push_back(A);
@@ -171,7 +171,7 @@ struct VQCD
     double tau0;
     VQCD():x(1.0), tau0(1.0){}
     VQCD(double xi, double ti):x(xi),tau0(ti){}
-    void operator()(const vector_type &X , vector_type &dXdt , double A)
+    void operator()(const state_type &X , state_type &dXdt , double A)
     {
         double e2A = exp(2.0 * A);
         double kNr = k(X[1], x) ;
@@ -204,7 +204,7 @@ struct jacobian
 {
     double x ;
     jacobian( double xi):x(xi){}
-    void operator()( const vector_type & X, matrix_type &J , const double &A , vector_type &dfdt )
+    void operator()( const state_type & X, matrix_type &J , const double &A , state_type &dfdt )
     {
         double X1 = X[0] ;
         double X2 = X[1] ;
@@ -371,27 +371,22 @@ struct jacobian
         + 2 * e2A * pow(X1, 4.0) * X4 * pow(X5,3.0) * kNr * dlogvfdl / pow(e2A * pow(X1,3.0) + X1 * pow(X5,2.0) * kNr,2.0) \
         + 4.0 * pow(X1 * kNr,2.0) * X4 * pow(X5,5.0) * dlogvfdl / pow(e2A * pow(X1,3.0) + X1 * pow(X5,2.0) * kNr,2.0) \
         + (2.0 / e2A ) * X4 * pow(X5, 7.0) * pow(kNr,3.0) * dlogvfdl / pow(e2A * pow(X1,3.0) + X1 * pow(X5,2.0) * kNr,2.0) ;
-        /*cout << "Jacobian : " << endl;
-        cout << J(0,0) << '\t' << J(0,1) << '\t' << J(0,2) << '\t' << J(0,3) << '\t' << J(0,4) << endl;
-        cout << J(1,0) << '\t' << J(1,1) << '\t' << J(1,2) << '\t' << J(1,3) << '\t' << J(1,4) << endl;
-        cout << J(2,0) << '\t' << J(2,1) << '\t' << J(2,2) << '\t' << J(2,3) << '\t' << J(2,4) << endl;
-        cout << J(3,0) << '\t' << J(3,1) << '\t' << J(3,2) << '\t' << J(3,3) << '\t' << J(3,4) << endl;
-        cout << J(4,0) << '\t' << J(4,1) << '\t' << J(4,2) << '\t' << J(4,3) << '\t' << J(4,4) << endl;
-        cout << "dfdt : " << endl;
-        cout << dfdt[0] << '\t' << dfdt[1] << '\t' << dfdt[2] << '\t' << dfdt[3] << '\t' << dfdt[4] << endl;*/
+        
     }
 };
 
 // Solve VHQCD and get the background fields
-vector<vector<double> > solveVHQCD(double xi, double ti)
+void solveVHQCD(double xi, double ti)
 {
-    vector<vector<double> > bckFields ;
-    vector < double > As ;
-    vector <double> dzs ;
-    vector <double> ls ;
-    vector <double> taus ;
-    vector <double> dls;
-    vector <double> dtaus;
+    // Computes dr/dA, tau, lambda, dtau/dA and dlambda/dA given x and tau0
+    // x - double. Physically it means x = N_f / N_c when N_f, N_c -> inf but with fixed coefficient
+    // tau0 - > parameter related with the exponential behaviour of the tachyon in the IR
+    // Does not return anything. Just creates a file with all the relevant data.
+    
+    // Create file where data will be saved
+    ofstream myfile;
+    myfile.open ("VQCD.txt");
+    myfile << "A" << '\t' << "dz" << '\t' << "lambda" << '\t' << "tau" << '\t' << "dlambda" << '\t' << "dtau"<< endl;
     // Boundary conditions in the IR
     double zIR = log(70.0 / ti) / CI(xi) ;
     double aIR = AIR(zIR) ;
@@ -407,55 +402,39 @@ vector<vector<double> > solveVHQCD(double xi, double ti)
     double dzIR = 1.0 / daIR ;
     dlambdair = dlambdair / daIR;
     dtauir = dtauir / daIR;
+
     // Define the type of the state. We have X = {dz, lambda, tau, dlambda, dtau}
-    vector_type X (5);
+    state_type X (5);
     X <<= dzIR, lambdair, tauir, dlambdair, dtauir;
-    As.push_back(aIR);
-    dzs.push_back(dzIR);
-    ls.push_back(lambdair);
-    taus.push_back(tauir);
-    dls.push_back(dlambdair);
-    dtaus.push_back(dtauir);
-    bckFields.push_back(As);
-    bckFields.push_back(dzs);
-    bckFields.push_back(ls);
-    bckFields.push_back(taus);
-    bckFields.push_back(dls);
-    bckFields.push_back(dtaus);
+
     cout << "Solving VHQCD for x = " << xi << ", tau0 = " << ti << endl;
-    double AUV = 2.5;
-    double h = 0.01 ;
+    double AUV = 5.0;
+    double h = 0.1 ;
     
-    /*typedef rosenbrock4< double > stepper_type;
-    stepper_type stepper;
-    typedef stepper_type::state_type state_type;
-    typedef stepper_type::value_type stepper_value_type;
-    typedef stepper_type::deriv_type deriv_type;
-    typedef stepper_type::time_type time_type;
-    state_type X(5) , Xerr(5);
-    X(0) = dzIR; X(1) = lambdair; X(2) = tauir; X(3) = dlambdair; X(4) = dtauir;
-    stepper.do_step( make_pair( VQCD(xi, ti) , jacobian(xi) ) , X , aIR , 0.01 , Xerr );
-    cout << X(0) << '\t' << X(1) << '\t' << X(2) << '\t' << X(3) << '\t' << X(4) << endl;
-    stepper.do_step( make_pair( VQCD(xi, ti) , jacobian(xi) ) , X , aIR , 0.01 );
-    cout << X(0) << '\t' << X(1) << '\t' << X(2) << '\t' << X(3) << '\t' << X(4) << endl;*/
-    size_t num_of_steps = integrate_adaptive( make_dense_output< rosenbrock4< double > >( 1.0e-6 , 1.0e-6 ) ,
-            make_pair( VQCD(xi, ti) , jacobian(xi) ), X , aIR , AUV , h, output_observer(bckFields) );
-    clog << num_of_steps << endl;
-    return bckFields;
+    auto stepper = make_dense_output( 1.0e-6 , 1.0e-6 , rosenbrock4< double >() );
+    stepper.initialize( X , aIR , h );
+    double relDiff = 1e6 ;
+    double tau1 = tauir ;
+    while ( relDiff > 1e-6 )
+    {
+        myfile << stepper.current_time() << '\t' << X(0) << '\t' << X(1) << '\t' << X(2) << '\t' << X(3) << '\t' << X(4) << endl;
+        stepper.do_step( make_pair( VQCD(xi, ti) , jacobian(xi) ) ) ;
+        X = stepper.current_state();
+        double tau2 = X(2);
+        relDiff = abs(tau2 - tau1) / tau1 ;
+        tau1 = tau2 ;
+    }
+    myfile.close();
 } ;
 
 
-int main()
+int main(int argc, char * argv[])
 {
-    vector<vector<double> > solution = solveVHQCD(1.0,1.0);
-    ofstream myfile;
-    myfile.open ("VQCD.txt");
-    myfile << "A" << '\t' << "dz" << '\t' << "lambda" << '\t' << "tau" << '\t' << "dlambda" << '\t' << "dtau"<< endl;
-    int n = solution[0].size() ;
-    for(int i = 0 ; i < n ; i++)
-    {
-        myfile << solution[0][i] << '\t' << solution[1][i] << '\t' << solution[2][i] << '\t' << solution[3][i] << '\t' << solution[4][i] << endl;
-    }
-    myfile.close();
+    if (argc != 3) cout << "Invalid number of parameters. Insert the values of x and tau0." << endl;
+    // Get the parameters parsed through CMD
+    double x = stod(argv[1]) ;
+    double tau0 = stod(argv[2]);
+    solveVHQCD(x, tau0);
+
     return 0;
 }
