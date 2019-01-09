@@ -174,22 +174,23 @@ struct VQCD
 };
 
 // [[Rcpp::export]]
-void solveVHQCD(long double xi, long double ti)
+List solveVHQCD(long double xi, long double ti)
 {
     // Computes dr/dA, tau, lambda, dtau/dA and dlambda/dA given x and tau0
     // x - long double. Physically it means x = N_f / N_c when N_f, N_c -> inf but with fixed coefficient
     // tau0 - > parameter related with the exponential behaviour of the tachyon in the IR
     // Does not return anything. Just creates a file with all the relevant data.
     
-    // Create file where data will be saved
-    ofstream myfile;
-    myfile.open ("VQCD.txt");
-    myfile << "A" << '\t' << "dz" << '\t' << "lambda" << '\t' << "tau" << '\t' << "dlambda" << '\t' << "dtau"<< endl;
+    // Create a vectors containing the values of the fields
+    vector< long double > AA, dZ, L, T, dL, dT;
     // Boundary conditions in the IR
     long double zIR = log(70.0 / ti) / CI(xi) ;
     long double aIR = AIR(zIR) ;
+    AA.push_back(aIR) ;
     long double lambdair = lambdaIR(zIR) ;
+    L.push_back(lambdair);
     long double tauir = 70.0 ;
+    T.push_back(tauir) ;
     // dA/dz at zIR
     long double daIR =  173.0 / ( 1728.0 * pow(zIR, 3.0)) + 0.5 /zIR - 2.0 * zIR  ;
     // dtau/dz at zIR
@@ -198,8 +199,11 @@ void solveVHQCD(long double xi, long double ti)
     long double dlambdair = sqrt(1.5) * lambdair * sqrt( 6 * pow(daIR, 2.0) + exp( 2.0 * aIR) * xi * Vf(lambdair,tauir, xi) \
          / (2.0 * sqrt(1+ dtauir * dtauir * k(lambdair, xi) / exp(2 * aIR ) ) ) - 0.5 * exp( 2.0 * aIR) * Vg(lambdair) );
     long double dzIR = 1.0 / daIR ;
+    dZ.push_back(dzIR) ;
     dlambdair = dlambdair / daIR;
+    dL.push_back(dlambdair) ;
     dtauir = dtauir / daIR;
+    dT.push_back(dtauir) ;
 
     // Define the type of the state. We have X = {dz, lambda, tau, dlambda, dtau}
     state_type X (5);
@@ -214,10 +218,16 @@ void solveVHQCD(long double xi, long double ti)
     long double A = aIR;
     while ( A < Amax )
     {
-        myfile << A << '\t' << X(0) << '\t' << X(1) << '\t' << X(2) << '\t' << X(3) << '\t' << X(4) << endl;
         stepper.do_step( VQCD(xi, ti) ) ;
         X = stepper.current_state();
         A = stepper.current_time();
+        AA.push_back(A) ;
+        dZ.push_back(X(0)) ;
+        L.push_back(X(1)) ;
+        T.push_back(X(2)) ;
+        dL.push_back(X(3)) ;
+        dT.push_back(X(4)) ;
     }
-    myfile.close();
+    return List::create(Named("A") = AA, Named("dz") = dZ, Named("lambda") = L, Named("tau") = T, 
+                        Named("dlambda") = dL, Named("dtau") = dT);
 } ;
