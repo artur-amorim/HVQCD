@@ -1,0 +1,12 @@
+Package: HVQCD
+Type: Package
+Title: Numerical solution to Holographic Models for QCD in the Veneziano Limit.
+Version: 0.0.1
+Author: Artur Amorim
+Maintainer: Artur Amorim <arturj.c.amorimdesousa@gmail.com>
+Description: This package solves the holographic duals of QCD in the Veneziano limit proposed by Jarvinen and Kiritsis. The underlying potentials are the ones of Type I. See arXiv:1112.1261v2 for more details.
+License: MIT
+LazyData: TRUE
+Imports:
+    Rcpp (>= 0.12.5)
+LinkingTo: Rcpp

@@ -1,0 +1,3 @@
+useDynLib(HVQCD)
+exportPattern("^[[:alpha:]]+")
+importFrom(Rcpp, evalCpp)
