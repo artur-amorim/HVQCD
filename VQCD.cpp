@@ -22,28 +22,6 @@ namespace phoenix = boost::phoenix;
 typedef boost::numeric::ublas::vector< long double > state_type;
 typedef boost::numeric::ublas::matrix< long double > matrix_type;
 
-struct output_observer
-{
-    vector< vector< long double > > &data;
-    output_observer( vector< vector < long double > > &fieldsData ) : data( fieldsData ) { }
-    void operator()( const state_type &X , long double A ) const
-    {
-        // Add A to vector of As
-        data[0].push_back(A);
-        // Add dz/dA to the vector of dzs
-        data[1].push_back(X[0]);
-        // Add lambda to the vector of lambdas
-        data[2].push_back(X[1]);
-        // Add tau to the vector of taus
-        data[3].push_back(X[2]);
-        // Add dlambda to the vector of dlambdas
-        data[4].push_back(X[3]);
-        // Add dtau to the vector of dtaus
-        data[5].push_back(X[4]);
-        //cout << A << '\t' << X[0] << '\t' <<  X[1] << '\t'<< X[2] << '\t' << X[3] << '\t' << X[4] << endl;
-    }
-};
-
 struct VQCD
 {
     long double x;
@@ -71,7 +49,7 @@ struct VQCD
         + x * kNr * vf * X[3] * pow( X[4], 2.0) / ( 6.0 * G) + 3.0 * x * vf * pow(X[1] * X[4], 2.0) * dkNr / ( 16.0 * G) \
         + 3 * e2A * x * pow(X[0] * X[1], 2.0) * dvfdl / ( 8.0 * G) + 3.0 * x * kNr * pow(X[1] * X[4], 2.0) * dvfdl / ( 8.0 * G) ;
         // 3rd Aeom in Mathematica Notebook
-        dXdt[4] = - 4.0 * X[4] + ( 4.0 / 9 ) * pow( X[1] / X[3] , 2.0) * X[4] - 4.0 * kNr * pow(X[4], 3.0) / ( e2A * X[0] * X[0]) \
+        dXdt[4] = - 4.0 * X[4] + ( 4.0 / 9 ) * pow( X[3] / X[1] , 2.0) * X[4] - 4.0 * kNr * pow(X[4], 3.0) / ( e2A * X[0] * X[0]) \
         + e2A * x * pow( X[0], 2.0 ) * kNr * vf * pow( X[4], 3.0) * G / ( 6 * ( e2A * pow(X[0],2.0) + kNr * pow(X[4], 2.0) ) )\
         - X[3] * X[4] * dkNr / kNr - X[3] * pow(X[4], 3.0) * dkNr / (2.0 * e2A * pow( X[0], 2.0) ) \
         + e2A * pow(X[0], 2.0) * dlogvfdt / kNr + pow(X[4], 2.0) * dlogvfdt - X[3] * X[4] * dlogvfdl \
@@ -287,37 +265,19 @@ void solveVHQCD(long double xi, long double ti)
     X <<= dzIR, lambdair, tauir, dlambdair, dtauir;
 
     cout << "Solving VHQCD for x = " << xi << ", tau0 = " << ti << endl;
-    long double Amax = 5.0;
+    long double Amax = 10.0;
     long double h = 0.1 ;
     
-    auto stepper = make_dense_output( 1.0e-6 , 1.0e-6 , rosenbrock4< long double >() );
+    dense_output_runge_kutta< controlled_runge_kutta< runge_kutta_dopri5< state_type > > > stepper;
     stepper.initialize( X , aIR , h );
-    /*dense_output_runge_kutta< controlled_runge_kutta< runge_kutta_dopri5< state_type > > > stepper;
-    stepper.initialize( X , aIR , h );*/
-    long double relDiff = 1e6 ;
-    long double tau1 = tauir ;
-    long double A;
-    while ( relDiff > 1e-6 /*A < Amax*/ )
-    {
-        A = stepper.current_time();
-        myfile << A << '\t' << X(0) << '\t' << X(1) << '\t' << X(2) << '\t' << X(3) << '\t' << X(4) << endl;
-        cout << A << '\t' << X(0) << '\t' << X(1) << '\t' << X(2) << '\t' << X(3) << '\t' << X(4) << endl;
-        stepper.do_step( make_pair( VQCD(xi, ti) , jacobian(xi) ) /*VQCD(xi, ti)*/ ) ;
-        X = stepper.current_state();
-        long double tau2 = X(2);
-        relDiff = abs(tau2 - tau1) / tau1 ;
-        tau1 = tau2 ;
-    }
-    /*// Let's initialize a new stepper
-    dense_output_runge_kutta< controlled_runge_kutta< runge_kutta_dopri5< state_type > > > stepper1;
-    stepper1.initialize( X , A , h );
+    long double A = aIR;
     while ( A < Amax )
     {
-        cout << A << '\t' << X(4) << endl ;
-        stepper1.do_step( VQCD(xi, ti) );
-        X = stepper1.current_state();
-        A = stepper1.current_time();
-    }*/
+        myfile << A << '\t' << X(0) << '\t' << X(1) << '\t' << X(2) << '\t' << X(3) << '\t' << X(4) << endl;
+        stepper.do_step( VQCD(xi, ti) ) ;
+        X = stepper.current_state();
+        A = stepper.current_time();
+    }
     myfile.close();
 } ;
 
@@ -328,6 +288,5 @@ int main(int argc, char * argv[])
     long double x = stod(argv[1]) ;
     long double tau0 = stod(argv[2]);
     solveVHQCD(x, tau0);
-
     return 0;
 }
