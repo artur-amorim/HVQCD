@@ -6,7 +6,9 @@
 #include <boost/numeric/odeint.hpp>
 #include <boost/numeric/ublas/vector.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
+#include "interp_1d.hpp"
 #include "bckPotentialsAsymp.hpp"
+#include "interp_1d.hpp"
 
 using namespace Rcpp;
 using namespace std;
@@ -60,7 +62,7 @@ List solveHVQCD(long double xi, long double ti)
     // Does not return anything. Just creates a file with all the relevant data.
     
     // Create a vectors containing the values of the fields
-    vector< long double > AA, dZ, L, T, dL, dT;
+    vector< long double > AA, dZ, L, T, dL, dT ;
     // Boundary conditions in the IR
     long double zIR = log(70.0 / ti) / CI(xi) ;
     long double aIR = AIR(zIR) ;
@@ -82,21 +84,19 @@ List solveHVQCD(long double xi, long double ti)
     dL.push_back(dlambdair) ;
     dtauir = dtauir / daIR;
     dT.push_back(dtauir) ;
-
     // Define the type of the state. We have X = {dz, lambda, tau, dlambda, dtau}
     state_type X (5);
     X <<= dzIR, lambdair, tauir, dlambdair, dtauir;
-
+    // Now compute the starting value of dX
     cout << "Solving VHQCD for x = " << xi << ", tau0 = " << ti << endl;
     long double Amax = 10.0;
     long double h = 0.1 ;
-    
     dense_output_runge_kutta< controlled_runge_kutta< runge_kutta_dopri5< state_type > > > stepper;
     stepper.initialize( X , aIR , h );
     long double A = aIR;
     while ( A < Amax )
     {
-        stepper.do_step( VQCD(xi, ti) ) ;
+        stepper.do_step( VQCD(xi, ti) ) ; 
         X = stepper.current_state();
         A = stepper.current_time();
         AA.push_back(A) ;
@@ -106,8 +106,8 @@ List solveHVQCD(long double xi, long double ti)
         dL.push_back(X(3)) ;
         dT.push_back(X(4)) ;
     }
+    Spline_Interp<long double> dzfun = Spline_Interp<long double>(AA, dZ);
     // Return A, dz/dA, L(A), T(A), dL(A) and dT(A)
     return List::create(Named("A") = AA, Named("dz") = dZ, Named("lambda") = L, Named("tau") = T, 
-                        Named("dlambda") = dL, Named("dtau") = dT,
-                        Named("zIR") = zIR);
+                        Named("dlambda") = dL, Named("dtau") = dT, Named("zIR") = zIR, Named("dzfun") = dzfun);
 } ;

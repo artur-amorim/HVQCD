@@ -43,7 +43,7 @@ long double dVg (long double l)
 long double d2Vg( long double l)
 {
     long double ans = V0 * V2 ;
-    ans = ans * (37 * l * l + 120.0 * l * l0 + 72 * l0 *l0 + 2.0 * log(1.0 + l / l0) * (31 * l * l + 84.0 * l * l0  + 72.0 * l0 * l0 + 4.0 * (2 * l * l + 6 * l * l0 + 9 * l0 * l0) * log(1.0 + l / l0)))  ;
+    ans = ans * (37 * l * l + 120.0 * l * l0 + 72 * l0 *l0 + 2.0 * log(1.0 + l / l0) * (31 * l * l + 84.0 * l * l0  + 72.0 * l0 * l0) + 8.0 * (2 * l * l + 6 * l * l0 + 9 * l0 * l0) * pow(log(1.0 + l / l0),2.0))  ;
     ans = ans / (36.0 * l0 * l0 * pow(1.0  + l / l0, 8.0/3.0) * pow(1 + log(1.0 + l / l0),1.5)) ;
     return ans;
 }
@@ -65,7 +65,7 @@ long double d2k(long double l, long double x)
 }
 long double Vf (long double l, long double t, long double x) 
 {
-    return exp( log( Vf0(l,x) ) - a0(x) * pow(t, 2.0) );
+    return exp( log( Vf0(l,x) ) - a0(x) * t * t );
 }
 long double dVfdl(long double l, long double t, long double x)
 {
