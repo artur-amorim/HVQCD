@@ -6,7 +6,6 @@
 #include <boost/numeric/odeint.hpp>
 #include <boost/numeric/ublas/vector.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
-#include "interp_1d.hpp"
 #include "bckPotentialsAsymp.hpp"
 #include "interp_1d.hpp"
 
@@ -109,5 +108,5 @@ List solveHVQCD(long double xi, long double ti)
     Spline_Interp<long double> dzfun = Spline_Interp<long double>(AA, dZ);
     // Return A, dz/dA, L(A), T(A), dL(A) and dT(A)
     return List::create(Named("A") = AA, Named("dz") = dZ, Named("lambda") = L, Named("tau") = T, 
-                        Named("dlambda") = dL, Named("dtau") = dT, Named("zIR") = zIR, Named("dzfun") = dzfun);
+                        Named("dlambda") = dL, Named("dtau") = dT, Named("zIR") = zIR );
 } ;

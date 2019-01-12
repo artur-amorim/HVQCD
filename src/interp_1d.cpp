@@ -178,6 +178,26 @@ class Spline_Interp : public Base_Interp<T> {
 			y = a * (*Base_Interp<T>::YY)[klo] + b * (*Base_Interp<T>::YY)[khi] + ( (a*a*a - a) * Y2[klo] + (b*b*b - b) * Y2[khi] ) * ( h * h) / 6.0;
 			return y ;
 		}
+
+		T integrate (T x)
+		{
+			if (x < (*Base_Interp<T>::XX)[0] || x > (*Base_Interp<T>::XX)[Base_Interp<T>::n - 1] ) throw("Value out interpolation bounds.");
+			int j = Base_Interp<T>::cor ? Base_Interp<T>::hunt(x) : Base_Interp<T>::locate(x) ; // Find j for x_j <= x < x_(j+1)
+			T value = 0 ;
+			// See notebook for formula of int_{x_j}^{x_(j+1)} f(x) dx where f is a cubic spline
+			for (int k = 0 ; k < j ; k++)
+			{
+				T xk = (*Base_Interp<T>::XX)[k] ;
+				T xk1 = (*Base_Interp<T>::XX)[k+1] ;
+				value += ( xk - xk1 ) * ( -12*(*Base_Interp<T>::YY)[k] -12*(*Base_Interp<T>::YY)[k+ 1] + pow(xk - xk1, 2.0) * ( Y2[j] + Y2[j + 1] ) ) / 24.0 ;
+			} 
+			T xj = (*Base_Interp<T>::XX)[j] ;
+			T xj1 = (*Base_Interp<T>::XX)[j+1] ;
+			value += ( x - xj ) * ( 12 * ( x + xj - 2 * xj1 ) * (*Base_Interp<T>::YY)[j] +
+			 ( x - xj ) * ( -12*(*Base_Interp<T>::YY)[j+1] + pow(x + xj - 2 * xj1,2.0) * Y2[j] +
+			 ( - x * x + xj * xj + 2 * xj * (x - 2 * xj1) + 2 * xj1 * xj1) * Y2[j+1] ) ) / ( 24.0 * (xj - xj1)) ;
+			return value ; 
+		}
 };
 
 #endif
