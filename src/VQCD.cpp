@@ -58,10 +58,10 @@ List solveHVQCD(long double xi, long double ti)
     // Computes dr/dA, tau, lambda, dtau/dA and dlambda/dA given x and tau0
     // x - long double. Physically it means x = N_f / N_c when N_f, N_c -> inf but with fixed coefficient
     // tau0 - > parameter related with the exponential behaviour of the tachyon in the IR
-    // Does not return anything. Just creates a file with all the relevant data.
+    // Returns a list with quantitites that depend on A, mq and zIR
     
     // Create a vectors containing the values of the fields
-    vector< long double > AA, dZ, L, T, dL, dT ;
+    vector< long double > Z, AA, dZ, L, T, dL, dT ;
     // Boundary conditions in the IR
     long double zIR = log(70.0 / ti) / CI(xi) ;
     long double aIR = AIR(zIR) ;
@@ -106,7 +106,13 @@ List solveHVQCD(long double xi, long double ti)
         dT.push_back(X(4)) ;
     }
     Spline_Interp<long double> dzfun = Spline_Interp<long double>(AA, dZ);
-    // Return A, dz/dA, L(A), T(A), dL(A) and dT(A)
-    return List::create(Named("A") = AA, Named("dz") = dZ, Named("lambda") = L, Named("tau") = T, 
-                        Named("dlambda") = dL, Named("dtau") = dT, Named("zIR") = zIR );
+    int n = AA.size() ;
+    long double zmin = zIR + dzfun.integrate(AA[ n - 1]) ;
+    for(int i = 0; i < n; i++)
+    {
+        Z.push_back( zIR + dzfun.integrate(AA[i]) - zmin ) ;
+    }
+    // Return A, Z, dz/dA, L(A), T(A), dL(A) and dT(A)
+    return List::create(Named("A") = AA, Named("z") = Z, Named("dz") = dZ, Named("lambda") = L, Named("tau") = T, 
+                        Named("dlambda") = dL, Named("dtau") = dT, Named("zIR") = zIR - zmin, Named("mq") = dT.back()/dZ.back() );
 } ;
