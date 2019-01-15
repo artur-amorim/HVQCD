@@ -61,7 +61,7 @@ List solveHVQCD(long double xi, long double ti)
     // Returns a list with quantitites that depend on A, mq and zIR
     
     // Create a vectors containing the values of the fields
-    vector< long double > Z, AA, dZ, L, T, dL, dT ;
+    vector< long double > Z, AA, dZ, L, T, dT ;
     // Boundary conditions in the IR
     long double zIR = log(70.0 / ti) / CI(xi) ;
     long double aIR = AIR(zIR) ;
@@ -80,7 +80,6 @@ List solveHVQCD(long double xi, long double ti)
     long double dzIR = 1.0 / daIR ;
     dZ.push_back(dzIR) ;
     dlambdair = dlambdair / daIR;
-    dL.push_back(dlambdair) ;
     dtauir = dtauir / daIR;
     dT.push_back(dtauir) ;
     // Define the type of the state. We have X = {dz, lambda, tau, dlambda, dtau}
@@ -102,7 +101,6 @@ List solveHVQCD(long double xi, long double ti)
         dZ.push_back(X(0)) ;
         L.push_back(X(1)) ;
         T.push_back(X(2)) ;
-        dL.push_back(X(3)) ;
         dT.push_back(X(4)) ;
     }
     Spline_Interp<long double> dzfun = Spline_Interp<long double>(AA, dZ);
@@ -112,7 +110,12 @@ List solveHVQCD(long double xi, long double ti)
     {
         Z.push_back( zIR + dzfun.integrate(AA[i]) - zmin ) ;
     }
-    // Return A, Z, dz/dA, L(A), T(A), dL(A) and dT(A)
-    return List::create(Named("A") = AA, Named("z") = Z, Named("dz") = dZ, Named("lambda") = L, Named("tau") = T, 
-                        Named("dlambda") = dL, Named("dtau") = dT, Named("zIR") = zIR - zmin, Named("mq") = dT.back()/dZ.back() );
+    // We need to reverse the lists because later
+    // we will use them to compute the spectra of vector mesons.
+    reverse(AA.begin(),AA.end()) ;
+    reverse(Z.begin(),Z.end()) ;
+    reverse(L.begin(),L.end()) ;
+    reverse(T.begin(),T.end()) ;
+    // Return A, Z, L(A), T(A), zIR and mq
+    return List::create(Named("z") = Z, Named("A") = AA, Named("lambda") = L, Named("tau") = T, Named("zIR") = zIR - zmin, Named("mq") = dT.back()/dZ.back() );
 } ;

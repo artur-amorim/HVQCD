@@ -42,4 +42,6 @@
 
 # All the files in notes
 notes/*
+*.Rproj
 .Rproj.user
+.Rhistory
