@@ -7,21 +7,18 @@
 using namespace Rcpp;
 
 // Definition of constants need to solve ODE
-const long double V0 = 12.0 ;
 const long double V1 = 11.0 / ( 27 * M_PI * M_PI);
 const long double V2 = 4619.0 / ( 46656.0 * pow(M_PI,4.0) );
-const long double W0 = 12.0/11;
-const long double l0 = 8 * pow(M_PI, 2.0);
 // Definition of functions needed to solve ODE
-long double W1 (long double x) 
+long double W1 (long double x, long double W0) 
 {
     return (24 + (11 - 2 * x) * W0) / ( 27.0 * pow(M_PI,2.0) * W0 ) ; 
 }
-long double W2 (long double x) 
+long double W2 (long double x, long double W0) 
 {
     return (24 * (857 - 46 * x) + (4619 - 1714 * x + 92 * pow(x, 2.0)) * W0) / (46656 * pow(M_PI,4.0) * W0) ;
 }
-long double a0 (long double x) 
+long double a0 (long double x, long double W0) 
 {
     return (12 - x * W0) / 8.0 ;
 }
@@ -29,27 +26,27 @@ long double a1 (long double x)
 {
     return (115 - 16 * x) / (216.0 * pow(M_PI, 2.0)) ;
 }
-long double Vg (long double l) 
+long double Vg (long double l, long double V0, long double lambda0) 
 {
-    return V0 * (1+ V1 * l + V2 * pow(l,2.0) * sqrt(1 + log(1.0 + l / l0))/pow(1.0 + l / l0,2.0/3)) ;
+    return V0 * (1+ V1 * l + V2 * pow(l,2.0) * sqrt(1 + log(1.0 + l / lambda0))/pow(1.0 + l / lambda0,2.0/3)) ;
 }
-long double dVg (long double l)
+long double dVg (long double l, long double lambda0, long double V0)
 {
-    long double ans = V1 + V2 * pow(l, 2.0) / ( 2.0 * pow( 1 + l / l0, 5.0/3) * l0 * sqrt( 1 + log( 1 + l / l0 )));
-    ans += 2.0 * V2 * l * sqrt( 1 + log( 1 + l / l0 )) / pow( 1 + l / l0, 2.0/3);
-    ans += - 2.0 * V2 * pow(l, 2.0) * sqrt( 1 + log( 1 + l / l0 )) / ( 3.0 * pow( 1 + l / l0, 5.0/3) * l0 );
+    long double ans = V1 + V2 * pow(l, 2.0) / ( 2.0 * pow( 1 + l / lambda0, 5.0/3) * lambda0 * sqrt( 1 + log( 1 + l / lambda0 )));
+    ans += 2.0 * V2 * l * sqrt( 1 + log( 1 + l / lambda0 )) / pow( 1 + l / lambda0, 2.0/3);
+    ans += - 2.0 * V2 * pow(l, 2.0) * sqrt( 1 + log( 1 + l / lambda0 )) / ( 3.0 * pow( 1 + l / lambda0, 5.0/3) * lambda0 );
     return V0 * ans;
 }
-long double d2Vg( long double l)
+long double d2Vg( long double l, long double lambda0, long double V0)
 {
     long double ans = V0 * V2 ;
-    ans = ans * (37 * l * l + 120.0 * l * l0 + 72 * l0 *l0 + 2.0 * log(1.0 + l / l0) * (31 * l * l + 84.0 * l * l0  + 72.0 * l0 * l0) + 8.0 * (2 * l * l + 6 * l * l0 + 9 * l0 * l0) * pow(log(1.0 + l / l0),2.0))  ;
-    ans = ans / (36.0 * l0 * l0 * pow(1.0  + l / l0, 8.0/3.0) * pow(1 + log(1.0 + l / l0),1.5)) ;
+    ans = ans * (37 * l * l + 120.0 * l * lambda0 + 72 * lambda0 *lambda0 + 2.0 * log(1.0 + l / lambda0) * (31 * l * l + 84.0 * l * lambda0  + 72.0 * lambda0 * lambda0) + 8.0 * (2 * l * l + 6 * l * lambda0 + 9 * lambda0 * lambda0) * pow(log(1.0 + l / lambda0),2.0))  ;
+    ans = ans / (36.0 * lambda0 * lambda0 * pow(1.0  + l / lambda0, 8.0/3.0) * pow(1 + log(1.0 + l / lambda0),1.5)) ;
     return ans;
 }
-long double Vf0 (long double l, long double x) 
+long double Vf0 (long double l, long double x, long double W0) 
 {
-    return W0 * ( 1 + W1(x) * l + W2(x) * pow(l, 2.0)) ;
+    return W0 * ( 1 + W1(x, W0) * l + W2(x, W0) * pow(l, 2.0) ) ;
 }
 long double k (long double l, long double x) 
 {
@@ -63,70 +60,70 @@ long double d2k(long double l, long double x)
 {
     return 7 * a1(x) * a1(x) / (4.0 * pow(1 + 0.75 * l * a1(x),10.0/3)) ;
 }
-long double Vf (long double l, long double t, long double x) 
+long double Vf (long double l, long double t, long double x, long double W0) 
 {
-    return exp( log( Vf0(l,x) ) - a0(x) * t * t );
+    return exp( log( Vf0(l,x, W0) ) - a0(x, W0) * t * t );
 }
-long double dVfdl(long double l, long double t, long double x)
+long double dVfdl(long double l, long double t, long double x, long double W0)
 {
-    return exp( log( W0 * ( W1(x) + 2.0 * l * W2(x) )) - a0(x) * t * t);
+    return exp( log( W0 * ( W1(x, W0) + 2.0 * l * W2(x, W0) )) - a0(x, W0) * t * t);
 }
-long double d2Vfdl(long double l, long double t, long double x)
+long double d2Vfdl(long double l, long double t, long double x, long double W0)
 {
-    return 2.0 * W0 * W2(x) * exp(- a0(x) * t * t);
+    return 2.0 * W0 * W2(x, W0) * exp(- a0(x, W0) * t * t);
 }
-long double d2Vfdl_Vf(long double l, long double t, long double x)
+long double d2Vfdl_Vf(long double l, long double t, long double x, long double W0)
 {
-    return 2.0 * W0 * W2(x) / Vf0(l,x) ;
+    return 2.0 * W0 * W2(x, W0) / Vf0(l,x, W0) ;
 }
-long double d2Vfdldt(long double l, long double t, long double x)
+long double d2Vfdldt(long double l, long double t, long double x, long double W0)
 {
-    return W0 * (W1(x) + 2 * l * W2(x)) * (-2.0 * a0(x) * t) * exp(-a0(x) * t * t);
+    return W0 * (W1(x, W0) + 2 * l * W2(x, W0)) * (-2.0 * a0(x, W0) * t) * exp(-a0(x, W0) * t * t);
 }
-long double d2Vfdldt_Vf(long double l, long double t, long double x)
+long double d2Vfdldt_Vf(long double l, long double t, long double x, long double W0)
 {
-    return W0 * (W1(x) + 2 * l * W2(x)) * (-2.0 * a0(x) * t) / Vf0(l,x) ;
+    return W0 * (W1(x, W0) + 2 * l * W2(x, W0)) * (-2.0 * a0(x, W0) * t) / Vf0(l, x, W0) ;
 }
-long double dVfdt(long double l, long double t, long double x)
+long double dVfdt(long double l, long double t, long double x, long double W0)
 {
-    return  (- 2 * a0(x) * t) * exp( log( Vf0(l,x) ) - a0(x) * pow(t, 2.0) ) ;
+    return  (- 2 * a0(x, W0) * t) * exp( log( Vf0(l,x, W0) ) - a0(x, W0) * pow(t, 2.0) ) ;
 }
-long double d2Vfdt(long double l, long double t, long double x)
+long double d2Vfdt(long double l, long double t, long double x, long double W0)
 {
-    return 2 * W0 * a0(x) * exp(-a0(x)*t*t) * (-1 + 2 * t * t * a0(x)) * (1 + l * W1(x) + l * l * W2(x) );
+    return 2 * W0 * a0(x, W0) * exp(-a0(x, W0)*t*t) * (-1 + 2 * t * t * a0(x, W0)) * (1 + l * W1(x, W0) + l * l * W2(x, W0) );
 }
-long double d2Vfdt_Vf(long double l, long double t, long double x)
+long double d2Vfdt_Vf(long double l, long double t, long double x, long double W0)
 {
-    return 2 * a0(x) * (-1 + 2 * t * t * a0(x)) ;
+    return 2 * a0(x, W0) * (-1 + 2 * t * t * a0(x, W0)) ;
 }
-long double dLogVfdt (long double t, long double x)
+long double dLogVfdt (long double t, long double x, long double W0)
 {
-    return - 2.0 * t * a0(x) ;
+    return - 2.0 * t * a0(x, W0) ;
 }
-long double dLogVfdl(long double l, long double x)
+long double dLogVfdl(long double l, long double x, long double W0)
 {
-    return ( W1(x) + 2.0 * l * W2(x) ) / ( 1.0 + l * W1(x) + W2(x) * l * l) ;
+    return ( W1(x, W0) + 2.0 * l * W2(x, W0) ) / ( 1.0 + l * W1(x, W0) + W2(x, W0) * l * l) ;
 }
 
 // Definition of the IR asymptotics
-long double AIR( long double z)
+long double AIR( long double z, long double V0, long double lambda0)
 {
-    return 13.0 / 8 + log(27 * pow(6, 0.25) / sqrt(4619) ) - (173.0 / 3456 ) / pow(z, 2.0) - pow(z, 2.0) + 0.5 * log(z) ;
+    return 13.0 / 8 + log( pow(864, 0.25) * sqrt(46656 * pow(M_PI, 4.0) / (4619 * V0 * lambda0 * lambda0) )) - (173.0 / 3456 ) / pow(z, 2.0) - pow(z, 2.0) + 0.5 * log(z) ;
 }
 
-long double lambdaIR (long double z)
+long double lambdaIR (long double z, long double lambda0)
 {
-    return exp( log(8 * pow(M_PI, 2.0)) - (39.0 / 16) - ( 151.0 / 2304) / pow(z, 2.0) + 1.5 * pow(z, 2.0)) ;
+    return lambda0 * exp( - (39.0 / 16) - ( 151.0 / 2304) / pow(z, 2.0) + 1.5 * pow(z, 2.0) ) ;
 }
 
-long double CI ( long double x)
+long double CI ( long double x, long double V0, long double W0, long double lambda0)
 {
-    return 81 * pow(3.0, 5.0 / 6) * pow( 115 - 16 * x, 4.0/3) * (11.0 - x) / ( 812944 * pow(2.0, 1.0 / 6)) ;
+    return 81 * pow(3.0, 5.0 / 6) * pow(M_PI, 4.0 / 3.0) * pow( 115 - 16 * x, 4.0/3) * (V0 - W0 * x) / ( 18476 * pow(2.0, 1.0 / 6) * V0 * pow(lambda0,2.0/3.0)) ;
 }
 
-long double tauIR ( long double z, long double t0, long double x)
+long double tauIR ( long double z, long double t0, long double x, long double V0, long double W0, long double lambda0)
 {
-    return t0 * exp( CI(x) * z) ;
+    return t0 * exp( CI(x, V0, W0, lambda0) * z) ;
 }
 
 #endif

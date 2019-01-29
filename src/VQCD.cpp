@@ -21,25 +21,28 @@ struct VQCD
 {
     long double x;
     long double tau0;
-    VQCD():x(1.0), tau0(1.0){}
-    VQCD(long double xi, long double ti):x(xi),tau0(ti){}
+    long double V0;
+    long double W0;
+    long double lambda0;
+    VQCD():x(1.0), tau0(1.0), V0(12.0), W0(12.0/11), lambda0(8.0 * M_PI * M_PI){}
+    VQCD(long double xi, long double ti, long double v0, long double w0, long double l0):x(xi),tau0(ti), V0(v0), W0(w0), lambda0(l0){}
     void operator()(const state_type &X , state_type &dXdt , long double A)
     {
         long double e2A = exp(2.0 * A);
         long double kNr = k(X[1], x) ;
         long double dkNr = dk(X[1],x);
-        long double vf = Vf(X[1], X[2], x) ;
-        long double dvfdl = dVfdl(X[1], X[2], x) ;
-        long double dlogvfdt = dLogVfdt(X[2], x) ;
-        long double dlogvfdl = dLogVfdl(X[1], x) ;
+        long double vf = Vf(X[1], X[2], x, W0) ;
+        long double dvfdl = dVfdl(X[1], X[2], x, W0) ;
+        long double dlogvfdt = dLogVfdt(X[2], x, W0) ;
+        long double dlogvfdl = dLogVfdl(X[1], x, W0) ;
         long double G = sqrt(1.0 + kNr * pow(X[4], 2.0) / ( e2A * pow(X[0], 2.0 ) ) ) ;
         // 1st Aeom in Mathematica Notebook 
         dXdt[0] = - X[0] + (4.0 / 9.0) * X[0] * pow(X[3], 2.0) / pow(X[1], 2.0) + x * e2A * pow(X[0], 3.0) * kNr * vf * pow(X[4], 2.0) * G / ( 6.0 * ( e2A * pow( X[0], 2.0 ) + kNr * pow(X[4], 2.0) ) ) ;
         dXdt[1] = X[3] ;
         dXdt[2] = X[4] ;
         // 2nd Aeom in Mathematica Notebook
-        dXdt[3] = - (3.0 / 8) * e2A * pow( X[0] * X[1], 2.0 ) * dVg(X[1]) + 9.0 * pow(X[1], 2.0) / X[3] \
-        - 3 * e2A * pow(X[0] * X[1], 2.0) * Vg(X[1]) / ( 4.0 * X[3] ) - 5.0 * X[3] + pow( X[3], 2.0) / X[1] \
+        dXdt[3] = - (3.0 / 8) * e2A * pow( X[0] * X[1], 2.0 ) * dVg(X[1], lambda0, V0) + 9.0 * pow(X[1], 2.0) / X[3] \
+        - 3 * e2A * pow(X[0] * X[1], 2.0) * Vg(X[1], lambda0, V0) / ( 4.0 * X[3] ) - 5.0 * X[3] + pow( X[3], 2.0) / X[1] \
         + ( 4.0 / 9) * pow(X[3], 3.0) / pow(X[1], 2.0) + 3 * e2A * x * pow( X[0] * X[1], 2.0) * vf / (4.0 * X[3] * G) \
         + x * kNr * vf * X[3] * pow( X[4], 2.0) / ( 6.0 * G) + 3.0 * x * vf * pow(X[1] * X[4], 2.0) * dkNr / ( 16.0 * G) \
         + 3 * e2A * x * pow(X[0] * X[1], 2.0) * dvfdl / ( 8.0 * G) + 3.0 * x * kNr * pow(X[1] * X[4], 2.0) * dvfdl / ( 8.0 * G) ;
@@ -53,7 +56,7 @@ struct VQCD
 };
 
 // [[Rcpp::export]]
-List solveHVQCD(long double xi, long double ti)
+List solveHVQCD(long double xi, long double ti, long double V0, long double W0, long double lambda0)
 {
     // Computes dr/dA, tau, lambda, dtau/dA and dlambda/dA given x and tau0
     // x - long double. Physically it means x = N_f / N_c when N_f, N_c -> inf but with fixed coefficient
@@ -63,20 +66,20 @@ List solveHVQCD(long double xi, long double ti)
     // Create a vectors containing the values of the fields
     vector< long double > Z, AA, dZ, L, T, dT ;
     // Boundary conditions in the IR
-    long double zIR = log(70.0 / ti) / CI(xi) ;
-    long double aIR = AIR(zIR) ;
+    long double zIR = log(70.0 / ti) / CI(xi, V0, W0, lambda0) ;
+    long double aIR = AIR(zIR, V0, lambda0) ;
     AA.push_back(aIR) ;
-    long double lambdair = lambdaIR(zIR) ;
+    long double lambdair = lambdaIR(zIR, lambda0) ;
     L.push_back(lambdair);
     long double tauir = 70.0 ;
     T.push_back(tauir) ;
     // dA/dz at zIR
     long double daIR =  173.0 / ( 1728.0 * pow(zIR, 3.0)) + 0.5 /zIR - 2.0 * zIR  ;
     // dtau/dz at zIR
-    long double dtauir = CI(xi) * tauir ;
+    long double dtauir = CI(xi, V0, W0, lambda0) * tauir ;
     // dlambda/dz at zIR. Expression got from eom2 in Mathematica notebook.
-    long double dlambdair = sqrt(1.5) * lambdair * sqrt( 6 * pow(daIR, 2.0) + exp( 2.0 * aIR) * xi * Vf(lambdair,tauir, xi) \
-         / (2.0 * sqrt(1+ dtauir * dtauir * k(lambdair, xi) / exp(2 * aIR ) ) ) - 0.5 * exp( 2.0 * aIR) * Vg(lambdair) );
+    long double dlambdair = sqrt(1.5) * lambdair * sqrt( 6 * pow(daIR, 2.0) + exp( 2.0 * aIR) * xi * Vf(lambdair,tauir, xi, W0) \
+         / (2.0 * sqrt(1+ dtauir * dtauir * k(lambdair, xi) / exp(2 * aIR ) ) ) - 0.5 * exp( 2.0 * aIR) * Vg(lambdair, V0, lambda0) );
     long double dzIR = 1.0 / daIR ;
     dZ.push_back(dzIR) ;
     dlambdair = dlambdair / daIR;
@@ -92,16 +95,17 @@ List solveHVQCD(long double xi, long double ti)
     dense_output_runge_kutta< controlled_runge_kutta< runge_kutta_dopri5< state_type > > > stepper;
     stepper.initialize( X , aIR , h );
     long double A = aIR;
+    cout << A << endl;
     while ( A < Amax )
     {
-        stepper.do_step( VQCD(xi, ti) ) ; 
+        stepper.do_step( VQCD(xi, ti, V0, W0, lambda0) ) ; 
         X = stepper.current_state();
         A = stepper.current_time();
+        //cout << A << '\t' <<  X(0) << '\t' <<  X(1) << '\t' <<  X(2) << endl;
         AA.push_back(A) ;
         dZ.push_back(X(0)) ;
         L.push_back(X(1)) ;
         T.push_back(X(2)) ;
-        dT.push_back(X(4)) ;
     }
     Spline_Interp<long double> dzfun = Spline_Interp<long double>(AA, dZ);
     int n = AA.size() ;
