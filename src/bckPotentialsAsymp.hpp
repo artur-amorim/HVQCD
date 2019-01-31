@@ -30,7 +30,7 @@ long double Vg (long double l, long double V0, long double lambda0)
 {
     return V0 * (1+ V1 * l + V2 * pow(l,2.0) * sqrt(1 + log(1.0 + l / lambda0))/pow(1.0 + l / lambda0,2.0/3)) ;
 }
-long double dVg (long double l, long double lambda0, long double V0)
+long double dVg (long double l, long double V0, long double lambda0)
 {
     long double ans = V1 + V2 * pow(l, 2.0) / ( 2.0 * pow( 1 + l / lambda0, 5.0/3) * lambda0 * sqrt( 1 + log( 1 + l / lambda0 )));
     ans += 2.0 * V2 * l * sqrt( 1 + log( 1 + l / lambda0 )) / pow( 1 + l / lambda0, 2.0/3);
@@ -116,14 +116,14 @@ long double lambdaIR (long double z, long double lambda0)
     return lambda0 * exp( - (39.0 / 16) - ( 151.0 / 2304) / pow(z, 2.0) + 1.5 * pow(z, 2.0) ) ;
 }
 
-long double CI ( long double x, long double V0, long double W0, long double lambda0)
+long double CI ( long double x, long double W0, long double V0, long double lambda0)
 {
     return 81 * pow(3.0, 5.0 / 6) * pow(M_PI, 4.0 / 3.0) * pow( 115 - 16 * x, 4.0/3) * (V0 - W0 * x) / ( 18476 * pow(2.0, 1.0 / 6) * V0 * pow(lambda0,2.0/3.0)) ;
 }
 
-long double tauIR ( long double z, long double t0, long double x, long double V0, long double W0, long double lambda0)
+long double tauIR ( long double z, long double t0, long double x, long double W0, long double V0, long double lambda0)
 {
-    return t0 * exp( CI(x, V0, W0, lambda0) * z) ;
+    return t0 * exp( CI(x, W0, V0, lambda0) * z) ;
 }
 
 #endif

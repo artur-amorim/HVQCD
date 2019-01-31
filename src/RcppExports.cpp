@@ -6,17 +6,17 @@
 using namespace Rcpp;
 
 // solveHVQCD
-List solveHVQCD(long double xi, long double ti, long double V0, long double W0, long double lambda0);
-RcppExport SEXP _HVQCD_solveHVQCD(SEXP xiSEXP, SEXP tiSEXP, SEXP V0SEXP, SEXP W0SEXP, SEXP lambda0SEXP) {
+List solveHVQCD(long double xi, long double ti, long double W0, long double V0, long double lambda0);
+RcppExport SEXP _HVQCD_solveHVQCD(SEXP xiSEXP, SEXP tiSEXP, SEXP W0SEXP, SEXP V0SEXP, SEXP lambda0SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< long double >::type xi(xiSEXP);
     Rcpp::traits::input_parameter< long double >::type ti(tiSEXP);
-    Rcpp::traits::input_parameter< long double >::type V0(V0SEXP);
     Rcpp::traits::input_parameter< long double >::type W0(W0SEXP);
+    Rcpp::traits::input_parameter< long double >::type V0(V0SEXP);
     Rcpp::traits::input_parameter< long double >::type lambda0(lambda0SEXP);
-    rcpp_result_gen = Rcpp::wrap(solveHVQCD(xi, ti, V0, W0, lambda0));
+    rcpp_result_gen = Rcpp::wrap(solveHVQCD(xi, ti, W0, V0, lambda0));
     return rcpp_result_gen;
 END_RCPP
 }
